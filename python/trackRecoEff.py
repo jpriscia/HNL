@@ -47,7 +47,7 @@ lines = open("fileList_mu2GeV.txt").read().splitlines()
 events = Events(lines)
 ########### for test uncomment this ############
 #events = Events(['root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-2_V-0.00836660026534_mu_onshell_pre2017_leptonFirst_NLO/heavyNeutrino_105.root'])
-event = events.__iter__().next()
+#event = events.__iter__().next()
 
 handleReco, labelReco  = Handle('vector<reco::Track>'),'generalTracks'
 handlePruned, labelPruned  = Handle ('std::vector<reco::GenParticle>'), 'genParticles'
@@ -131,9 +131,9 @@ for evt in events:
     if count%100==0: print 'processing event ', count
     count+=1
 
-    event.getByLabel(labelPruned, handlePruned)
-    event.getByLabel(labelReco, handleReco)
-    event.getByLabel(labelJet, handleJet)
+    evt.getByLabel(labelPruned, handlePruned)
+    evt.getByLabel(labelReco, handleReco)
+    evt.getByLabel(labelJet, handleJet)
 
     # get the product                                                                                                      
     pruned = handlePruned.product()
