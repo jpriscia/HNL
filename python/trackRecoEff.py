@@ -13,16 +13,20 @@ from math import floor
 from pdb import set_trace
 
 
+print 'entra'
+
+
 def bestMatchedParticles( object, matchCollection):
     '''Return the best match to object in matchCollection, which is the closest object in delta R'''
     deltaR2Min = float('+inf')
     bm = None
     matchList=[]
     for match in matchCollection:
-        dR2 = deltaR2( object.eta(), object.phi(),
-                       match.eta(), match.phi() )
-        if dR2<0.3:
-            matchList.append((dR2,match))
+        if abs(match.dxy(object.vertex()))<0.5 and abs(match.dz(object.vertex()))<0.5:
+            dR2 = deltaR2( object.eta(), object.phi(),
+                           match.eta(), match.phi() )
+            if dR2<0.3:
+                matchList.append((dR2,match))
     matchList.sort(key=lambda tup: tup[0])
     return matchList
 
@@ -42,11 +46,11 @@ def isAncestor(a, p):
             return True
         return False
 
-lines = open("fileList_mu4GeV.txt").read().splitlines()
+lines = open("fileList_mu1GeV.txt").read().splitlines()
 
-#events = Events(lines)
+events = Events(lines)
 ########### for test uncomment this ############
-events = Events(['root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-2_V-0.00836660026534_mu_onshell_pre2017_leptonFirst_NLO/heavyNeutrino_105.root'])
+#events = Events(['root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-2_V-0.00836660026534_mu_onshell_pre2017_leptonFirst_NLO/heavyNeutrino_105.root'])
 #event = events.__iter__().next()
 
 handleReco, labelReco  = Handle('vector<reco::Track>'),'generalTracks'
@@ -56,7 +60,7 @@ handleJet, labelJet = Handle('vector<reco::PFJet>'), 'ak4PFJetsCHS'
 #handlePacked, labelPacked  = Handle ("std::vector<pat::PackedGenParticle> "), "packedGenParticles"
 
 #######OutputTTree###############
-outfile = root_open('tree_lljj.root', 'w')
+outfile = root_open('tree_1GeVlljj_muNew.root', 'w')
 
 class GenTree(TreeModel):
         
@@ -64,7 +68,14 @@ class GenTree(TreeModel):
         pt_NuGen = FloatCol()
         phi_NuGen = FloatCol()
         eta_NuGen = FloatCol()
+        theta_NuGen = FloatCol()
         aperture_Gen = FloatCol()
+        px_NuGen = FloatCol()
+        py_NuGen = FloatCol()
+        pz_NuGen = FloatCol()
+        vx_NuGen = FloatCol()
+        vy_NuGen = FloatCol()
+        vz_NuGen = FloatCol()
         p_Gen =  stl.vector(float)
         pt_Gen = stl.vector(float)
         px_Gen = stl.vector(float)
@@ -75,6 +86,9 @@ class GenTree(TreeModel):
         theta_Gen  = stl.vector(float)
         mass_Gen  = stl.vector(float)
         e_Gen  = stl.vector(float)
+        vx_Gen = stl.vector(float)
+        vy_Gen = stl.vector(float)
+        vz_Gen = stl.vector(float)
 
         p_Reco =  stl.vector(float)
         pt_Reco = stl.vector(float)
@@ -114,6 +128,7 @@ class GenTree(TreeModel):
         neutrals  = IntCol()
         charged   = IntCol()
         dMeson = IntCol()
+        cQuark = IntCol()
 
         pt_Jet = FloatCol()
         eta_Jet = FloatCol()
@@ -139,7 +154,7 @@ for evt in events:
     pruned = handlePruned.product()
     recoCand = handleReco.product()
     recoJets = handleJet.product()
-
+    #set_trace()
     #get the list of maj neutrino - len shoud be always one
     maj_neutrinos = [pp for pp in pruned if ((abs(pp.pdgId()) == 9900012 or abs(pp.pdgId()) == 9900014 or abs(pp.pdgId()) == 9900016) and pp.isLastCopy())]
 
@@ -152,19 +167,28 @@ for evt in events:
     inter_particles = []
     primaryVtx = None
     dMeson = 0
-
+    cQuark = 0
     for maj_n in maj_neutrinos:
         tree.p_NuGen =   maj_n.p()
+        tree.px_NuGen = maj_n.px()
+        tree.py_NuGen = maj_n.py()
+        tree.pz_NuGen = maj_n.pz()
         tree.pt_NuGen =  maj_n.pt()
         tree.phi_NuGen = maj_n.phi()
         tree.eta_NuGen = maj_n.eta()
+        tree.theta_NuGen = maj_n.theta()
+        tree.vx_NuGen = maj_n.vx()
+        tree.vy_NuGen = maj_n.vy()
+        tree.vz_NuGen = maj_n.vz()
 
-        
         primaryVtx = (maj_n.vx(),maj_n.vy(),maj_n.vz())
         #print "majorana neutrinos mass: ", maj_n.mass() 
 
         #loop on the gen and look at final particles. Pi0 is considered as final particle
         for p in pruned:
+            #print p.vertex().x(),p.vertex().y(),p.vertex().z()
+            #print p.vx(), p.vy(), p.vz()
+            #print ''
             if (p.status()==1 and p.isLastCopy() and (p != maj_n) and (p not in final_particles)):
                 if isAncestor(maj_n,p):
                     if p.mother(0).pdgId()==111 and (p.mother(0).isLastCopy()):
@@ -180,7 +204,10 @@ for evt in events:
                     inter_particles.append(p)
                     if abs(p.pdgId())==431:
                         dMeson+=1
-
+                    if abs(p.pdgId())==4:
+                        cQuark+=1
+                        #print cQuark
+                
     abs_final_part = [ abs(x.pdgId()) for x in final_particles]
 
     #save some infos of the generated particles
@@ -194,6 +221,9 @@ for evt in events:
         tree.dx_Gen.push_back(primaryVtx[0]-x.vx())
         tree.dy_Gen.push_back(primaryVtx[1]-x.vy())
         tree.dz_Gen.push_back(primaryVtx[2]-x.vz())
+        tree.vx_Gen.push_back(x.vx())
+        tree.vy_Gen.push_back(x.vy())
+        tree.vz_Gen.push_back(x.vz())
         tree.eta_Gen.push_back(x.eta())
         tree.phi_Gen.push_back(x.phi())
         tree.theta_Gen.push_back(x.theta())
@@ -226,6 +256,8 @@ for evt in events:
             tree.dxyErr_RecoPV.push_back(minEl[1][0][1].dxyError())
             tree.dz_RecoPV.push_back(minEl[1][0][1].dz())
             tree.dzErr_RecoPV.push_back(minEl[1][0][1].dzError())
+            #tree.dxy_GenSV.push_back(minEl[1][0][1].dxy(minEl[0].vertex()))
+            #tree.dz_GenSV.push_back(minEl[1][0][1].dz(minEl[0].vertex()))
 
             tree.p_Reco.push_back(minEl[1][0][1].p())
             tree.pt_Reco.push_back(minEl[1][0][1].pt())
@@ -262,7 +294,7 @@ for evt in events:
     tree.neutrals = abs_final_part.count(130)+abs_final_part.count(310)+abs_final_part.count(111)+abs_final_part.count(16)+abs_final_part.count(14)+abs_final_part.count(12)
     tree.charged = abs_final_part.count(321)+abs_final_part.count(211)+abs_final_part.count(13)+abs_final_part.count(11)
     tree.dMeson = dMeson
-
+    tree.cQuark = cQuark
     ####### Let's match the jets #######
 
     jets = [jet for jet in recoJets]
