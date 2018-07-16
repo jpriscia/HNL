@@ -17,16 +17,6 @@ from pylab import arange, show, cm
 from pdb import set_trace
 
 
-print 'entra'
-
-vtxPlot_IVF = plt.Hist1D(500,-100,100, name="deltaZ_IVF", title="deltaZ_IVF")
-vtxPlot_SV = plt.Hist1D(500,-5,5, name="deltaZ_SV", title="deltaZ_SV")
-vtxPlot_CSV = plt.Hist1D(500,-5,5, name="deltaZ_CSV", title="deltaZ_CSV")
-vtxPlot_CSVVSL = plt.Hist1D(500,-5,5, name="deltaZ_CSVVSL", title="deltaZ_CSVVSL")
-
-vrtxMatch=plt.Hist2D(500,-100,100,500,0,100,name='matchedVtx',title='matchedVtx')
-vrtxNoMatch=plt.Hist2D(500,-100,100,500,0,100,name='noMatchedVtx',title='noMatchedVtx')
-
 def bestMatchedParticles( object, matchCollection):
     '''Return the best match to object in matchCollection, which is the closest object in delta R'''
     deltaR2Min = float('+inf')
@@ -57,22 +47,19 @@ def isAncestor(a, p):
             return True
         return False
 
-#lines = open("/afs/cern.ch/user/j/jpriscia/CMSSW_HNL_17/src/HNL/HNL/src/secondVertex/prova_AOD.root").read().splitlines()
 
-events = Events('/afs/cern.ch/user/j/jpriscia/CMSSW_HNL_17/src/HNL/HNL/src/secondVertex/prova_AOD.root')
+events = Events('/afs/cern.ch/user/j/jpriscia/CMSSW_HNL_17/src/HNL/HNL/src/secondVertex/prova_miniAOD.root')
 
-handleReco, labelReco  = Handle('vector<reco::Track>'),'generalTracks'
-handlePruned, labelPruned  = Handle ('std::vector<reco::GenParticle>'), 'genParticles'
-handleJet, labelJet = Handle('vector<reco::PFJet>'), 'ak4PFJetsCHS'
 
-handleSV, labelSV = Handle('vector<reco::Vertex>'), 'inclusiveSecondaryVertices'
-handleCSV, labelCSV = Handle('vector<reco::VertexCompositePtrCandidate>'), 'inclusiveCandidateSecondaryVertices'
-handleCSVvsL, labelCSVvsL = Handle('vector<reco::VertexCompositePtrCandidate>'), 'inclusiveCandidateSecondaryVerticesCvsL'
+#collections
+handlePruned, labelPruned  = Handle ('vector<reco::GenParticle>'), 'prunedGenParticles'
+handleJet, labelJet = Handle('vector<reco::GenJet>'), 'slimmedGenJetsAK8'
 handleIVF, labelIVF = Handle('vector<reco::Vertex>'),'inclusiveVertexFinder'
+handlePFCand, labelPFCand = Handle('vector<pat::PackedCandidate>'),'packedPFCandidates'
 
 
 #######OutputTTree###############
-outfile = root_open('prova.root', 'w')
+outfile = root_open('miniAOD_IVF.root', 'w')
 
 class GenTree(TreeModel):
         
@@ -81,121 +68,78 @@ class GenTree(TreeModel):
         phi_NuGen = FloatCol()
         eta_NuGen = FloatCol()
         theta_NuGen = FloatCol()
-        aperture_Gen = FloatCol()
         px_NuGen = FloatCol()
         py_NuGen = FloatCol()
         pz_NuGen = FloatCol()
         vx_NuGen = FloatCol()
         vy_NuGen = FloatCol()
         vz_NuGen = FloatCol()
-        p_Gen =  stl.vector(float)
-        pt_Gen = stl.vector(float)
-        px_Gen = stl.vector(float)
-        py_Gen = stl.vector(float)
-        pz_Gen = stl.vector(float)
-        eta_Gen  = stl.vector(float)
-        phi_Gen  = stl.vector(float)
-        theta_Gen  = stl.vector(float)
-        mass_Gen  = stl.vector(float)
-        e_Gen  = stl.vector(float)
-        vx_Gen = stl.vector(float)
-        vy_Gen = stl.vector(float)
-        vz_Gen = stl.vector(float)
-
-        p_Reco =  stl.vector(float)
-        pt_Reco = stl.vector(float)
-        px_Reco  = stl.vector(float)
-        py_Reco  = stl.vector(float)
-        pz_Reco  = stl.vector(float)
-
-        vx_Reco  = stl.vector(float)
-        vy_Reco  = stl.vector(float)
-        vz_Reco  = stl.vector(float)
-
-        eta_Reco  = stl.vector(float)
-        etaErr_Reco  = stl.vector(float)
-        phi_Reco  = stl.vector(float)
-        phiErr_Reco  = stl.vector(float)
-        theta_Reco  = stl.vector(float)
-        thetaErr_Reco  = stl.vector(float)
-
-        idx = stl.vector(int)
-        pdgId = stl.vector(int)
-        dr = stl.vector(float)
-        dx_Gen = stl.vector(float)
-        dy_Gen = stl.vector(float)
-        dz_Gen = stl.vector(float)
-        algo = stl.vector(int)
-        # 'dxy', 'dxyError', 'dz', 'dzError'
-        dxy_RecoPV = stl.vector(float)
-        dxyErr_RecoPV = stl.vector(float)
-        dz_RecoPV = stl.vector(float)
-        dzErr_RecoPV = stl.vector(float)
-        kaonCharged = IntCol()
-        pionCharged = IntCol()
-        kaonNeutrals = IntCol()
-        pionNeutrals = IntCol()
-        muons  = IntCol()
-        electrons  = IntCol()
-        neutrals  = IntCol()
-        charged   = IntCol()
-        dMeson = IntCol()
-        cQuark = IntCol()
-
-        pt_Jet = FloatCol()
-        eta_Jet = FloatCol()
-        phi_Jet = FloatCol()
-        mass_Jet = FloatCol()
-        et_Jet = FloatCol()
-        deposits_Jet = stl.vector(float)
-
+        vx_SecGen = FloatCol()
+        vy_SecGen = FloatCol()
+        vz_SecGen = FloatCol()
+        vx_SecReco = FloatCol()
+        vy_SecReco = FloatCol()
+        vz_SecReco = FloatCol()
+        dx_SecReco = FloatCol()
+        dy_SecReco = FloatCol()
+        dz_SecReco = FloatCol()
+        d3D_SecReco = FloatCol()
 
 tree = Tree('gentree', model=GenTree)
 
 count=0
-csvvsl_count=0
-csv_count=0
-sv_count=0
-ivf_count=0
-ivf_all=0
-ivf_good=0
-maj_in_accept=0
 
 for evt in events:
+
+    #initialize
+    tree.p_NuGen = -1000.
+    tree.pt_NuGen = -1000.
+    tree.phi_NuGen = -1000.
+    tree.eta_NuGen = -1000.
+    tree.theta_NuGen = -1000.
+    tree.px_NuGen = -1000.
+    tree.py_NuGen = -1000.
+    tree.pz_NuGen = -1000.
+    tree.vx_NuGen = -1000.
+    tree.vy_NuGen = -1000.
+    tree.vz_NuGen = -1000.
+    tree.vx_SecGen = -1000.
+    tree.vy_SecGen = -1000.
+    tree.vz_SecGen = -1000.
+    tree.vx_SecReco = -1000.
+    tree.vy_SecReco = -1000.
+    tree.vz_SecReco = -1000.
+    tree.dx_SecReco = -1000.
+    tree.dy_SecReco = -1000.
+    tree.dz_SecReco = -1000.
+    tree.d3D_SecReco = -1000.
+
+
+
+
     if count%100==0: print 'processing event ', count
     count+=1
 
     evt.getByLabel(labelPruned, handlePruned)
-    evt.getByLabel(labelReco, handleReco)
     evt.getByLabel(labelJet, handleJet)
-    evt.getByLabel(labelSV, handleSV)  #vector<reco::Vertex> "inclusiveSecondaryVertices"
-    evt.getByLabel(labelCSV, handleCSV) #vector<reco::VertexCompositePtrCandidate>    "inclusiveCandidateSecondaryVertices" 
-    evt.getByLabel(labelCSVvsL,handleCSVvsL)  #vector<reco::VertexCompositePtrCandidate>    "inclusiveCandidateSecondaryVerticesCvsL"
     evt.getByLabel(labelIVF, handleIVF)
+    evt.getByLabel(labelPFCand, handlePFCand)
 
     # get the product                                                                                                      
     pruned = handlePruned.product()
-    recoCand = handleReco.product()
     recoJets = handleJet.product()
-    sv = handleSV.product()
-    csv = handleCSV.product()
-    csvvsl = handleCSVvsL.product()
     ivf = handleIVF.product()
+    pfCands = handlePFCand.product()
 
-    #if count ==10: set_trace()
-    #get the list of maj neutrino - len shoud be always one
+    #set_trace()
+
+    # list of mak neutrinos
     maj_neutrinos = [pp for pp in pruned if ((abs(pp.pdgId()) == 9900012 or abs(pp.pdgId()) == 9900014 or abs(pp.pdgId()) == 9900016) and pp.isLastCopy())]
 
     if len(maj_neutrinos) != 1:
         set_trace()
         print "we have multiple majorana neutrinos"
 
-    final_particles = []
-    final_particles_pi0 = []
-    inter_particles = []
-    primaryVtx = None
-    dMeson = 0
-    cQuark = 0
     for maj_n in maj_neutrinos:
         tree.p_NuGen =   maj_n.p()
         tree.px_NuGen = maj_n.px()
@@ -210,13 +154,12 @@ for evt in events:
         tree.vz_NuGen = maj_n.vz()
 
         primaryVtx = (maj_n.vx(),maj_n.vy(),maj_n.vz())
-        #print "majorana neutrinos mass: ", maj_n.mass() 
+
 
         #loop on the gen and look at final particles. Pi0 is considered as final particle
+        final_particles = []
+        final_particles_pi0 = []
         for p in pruned:
-            #print p.vertex().x(),p.vertex().y(),p.vertex().z()
-            #print p.vx(), p.vy(), p.vz()
-            #print ''
             if (p.status()==1 and p.isLastCopy() and (p != maj_n) and (p not in final_particles)):
                 if isAncestor(maj_n,p):
                     if p.mother(0).pdgId()==111 and (p.mother(0).isLastCopy()):
@@ -226,154 +169,78 @@ for evt in events:
                     else:
                         final_particles.append(p)
 
-            #I want to check if there is a D meson as well...
-            if (p.status()!=1 and p.isLastCopy() and (p != maj_n) and (p not in inter_particles)):
-                if isAncestor(maj_n,p):
-                    inter_particles.append(p)
-                    if abs(p.pdgId())==431:
-                        dMeson+=1
-                    if abs(p.pdgId())==4:
-                        cQuark+=1
-                        #print cQuark
-                
         abs_final_part = [ abs(x.pdgId()) for x in final_particles]
 
-        vertex_pos = []
-    #save some infos of the generated particles
-        for x in final_particles:
-            tree.p_Gen.push_back(x.p())
-            tree.pt_Gen.push_back(x.pt())
-            tree.px_Gen.push_back(x.px())
-            tree.py_Gen.push_back(x.py())
-            tree.pz_Gen.push_back(x.pz())
-            tree.pdgId.push_back(x.pdgId())
-            tree.dx_Gen.push_back(primaryVtx[0]-x.vx())
-            tree.dy_Gen.push_back(primaryVtx[1]-x.vy())
-            tree.dz_Gen.push_back(primaryVtx[2]-x.vz())
-            tree.vx_Gen.push_back(x.vx())
-            tree.vy_Gen.push_back(x.vy())
-            tree.vz_Gen.push_back(x.vz())
-            tree.eta_Gen.push_back(x.eta())
-            tree.phi_Gen.push_back(x.phi())
-            tree.theta_Gen.push_back(x.theta())
-            tree.mass_Gen.push_back(x.mass())
-            tree.e_Gen.push_back(x.energy())
+        #take muons
+        muons_gen = [x for x in final_particles if abs(x.pdgId())==13]
 
+        # lambda to order in momentum. The one with higher p should be 2nd muon
+        muons_gen.sort(key=lambda x: -x.pt())
 
-            
-        for x in final_particles:
-            if abs(x.pdgId())==13 :
-                vertex_pos.append(x.vx())
-                vertex_pos.append(x.vy())
-                vertex_pos.append(x.vz())
-                vertex_pos.append(x.eta())
+        if abs(muons_gen[0].vz())>200 or sqrt(muons_gen[0].vx()*muons_gen[0].vx()+muons_gen[0].vy()*muons_gen[0].vy())>60 or abs(muons_gen[0].eta())>2.5:
+            tree.fill(reset=True)
+            continue 
+
+        secVtxGen = (muons_gen[0].vx(),muons_gen[0].vy(),muons_gen[0].vz())
+        tree.vx_SecGen = muons_gen[0].vx()
+        tree.vy_SecGen = muons_gen[0].vy()
+        tree.vz_SecGen = muons_gen[0].vz()
+
+        #loop on PFCandidates to see how many do have a prompt muon
+        muonsPrompt=[]
+        muonsDetached=[]
+        for cand in pfCands:
+            if (cand.isGlobalMuon() or cand.isMuon() or cand.isTrackerMuon() or cand.isCaloMuon()) and cand.dxy()<0.1:
+                #print 'muon found'
+                muonsPrompt.append(cand)
+            if (cand.isGlobalMuon() or cand.isMuon() or cand.isTrackerMuon() or cand.isCaloMuon()) and cand.dxy()>0.1:
+                muonsDetached.append(cand)
+        #print muonsDetached
+        #if none, I don't even bother to check the secondary vertex
+        if len(muonsPrompt)==0 or len(muonsDetached)==0:
+            tree.fill(reset=True)
+            continue
+         
+        # ivf vertex position
+        verteces_good = []
+        for vertex in ivf:
+            for trk_id in range(vertex.tracksSize()): 
+                trk = vertex.trackRefAt(trk_id).get()
+                #print trk.algo()
+                if trk.dxy()>0.1:
+                    for muon_det in muonsDetached:
+                        if deltaR(trk,muon_det)<0.05:
+                            verteces_good.append(vertex)
+                            break   #if I have the detached muon, it is a good vertex!
+
         
-        #if abs(vertex_pos[2])<200 and abs(sqrt(vertex_pos[0]*vertex_pos[0]+vertex_pos[1]*vertex_pos[1]))<68  :
-            #print "maj neutrino decay: ", vertex_pos
-        delta_csv = []
-        delta_csvvsl = []
-        delta_sv = []
-        delta_ivf = []
-
-        if abs(vertex_pos[2])<200 and abs(sqrt(vertex_pos[0]*vertex_pos[0]+vertex_pos[1]*vertex_pos[1]))<68 and abs(vertex_pos[3])<2.5 :
-            maj_in_accept+=1
-            #print "majorana vertex:", vertex_pos[0], vertex_pos[1], vertex_pos[2]
-            for vertex in ivf:
-                deltaX = abs(vertex_pos[0]-vertex.x())
-                deltaY = abs(vertex_pos[1]-vertex.y())
-                deltaZ = abs(vertex_pos[2]-vertex.z())
-                delta_ivf.append((deltaX,deltaY,deltaZ,sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)))
-                ivf_all+=1
-            for vertex in csv: 
-                deltaX = abs(vertex_pos[0]-vertex.vx()) 
-                deltaY = abs(vertex_pos[1]-vertex.vy())
-                deltaZ = abs(vertex_pos[2]-vertex.vz())
-                delta_csv.append((deltaX,deltaY,deltaZ,sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)))
-
-            for vertex in csvvsl:
-                deltaX = abs(vertex_pos[0]-vertex.vx())
-                deltaY = abs(vertex_pos[1]-vertex.vy())
-                deltaZ = abs(vertex_pos[2]-vertex.vz())
-                delta_csvvsl.append((deltaX,deltaY,deltaZ,sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)))
+        if len(verteces_good)==0: 
+            tree.fill(reset=True)
+            continue
+        
+        #I match to the generated vertex and take the best
+        bestVtx = None
+        delta_3D_max = 1000000000
+        for vtx in verteces_good:
+                deltaX = abs(secVtxGen[0]-vertex.x())
+                deltaY = abs(secVtxGen[1]-vertex.y())
+                deltaZ = abs(secVtxGen[2]-vertex.z())
+                delta_3D = sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)
                 
-            for vertex in sv:
-                deltaX = abs(vertex_pos[0]-vertex.x())
-                deltaY = abs(vertex_pos[1]-vertex.y())
-                deltaZ = abs(vertex_pos[2]-vertex.z())
-                delta_sv.append((deltaX,deltaY,deltaZ,sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)))
+                if delta_3D<delta_3D_max:
+                    bestVtx = vtx
+                    delta_3D_max=delta_3D
+                    
 
-            delta_ivf.sort(key=lambda tup: tup[3])
-            delta_csv.sort(key=lambda tup: tup[3])
-            delta_csvvsl.sort(key=lambda tup: tup[3])
-            delta_sv.sort(key=lambda tup: tup[3])
-            
-            if len(delta_ivf)>0:
-                vtxPlot_IVF.fill(delta_ivf[0][3])
-                ivf_count+=1
-                if delta_ivf[0][3]<1:
-                    vrtxMatch.fill(vertex_pos[2],sqrt(vertex_pos[0]*vertex_pos[0]+vertex_pos[1]*vertex_pos[1]))
-                    ivf_good+=1
-                if delta_ivf[0][3]>1: vrtxNoMatch.fill(vertex_pos[2],sqrt(vertex_pos[0]*vertex_pos[0]+vertex_pos[1]*vertex_pos[1]))
-
-            if len(delta_sv)>0:
-                vtxPlot_SV.fill(delta_sv[0][3])
-                #if delta_sv[0][3]<1: print "SV", delta_sv[0][0], delta_sv[0][1], delta_sv[0][2]
-                sv_count+=1
-            if len(delta_csv)>0:
-                vtxPlot_CSV.fill(delta_csv[0][3])
-                #if delta_csv[0][3]<1: print "CSV", delta_csv[0][0], delta_csv[0][1], delta_csv[0][2]
-                csv_count+=1
-            if len(delta_csvvsl)>0:
-                vtxPlot_CSVVSL.fill(delta_csvvsl[0][3])
-                #if delta_csvvsl[0][3]<1: print "CSVVSL", delta_csvvsl[0][0], delta_csvvsl[0][1], delta_csvvsl[0][2]
-                csvvsl_count+=1
-
+        tree.vx_SecReco = bestVtx.x()
+        tree.vy_SecReco = bestVtx.y()
+        tree.vz_SecReco = bestVtx.z()
+        tree.dx_SecReco = abs(secVtxGen[0]-bestVtx.x())
+        tree.dy_SecReco = abs(secVtxGen[0]-bestVtx.y())
+        tree.dz_SecReco = abs(secVtxGen[0]-bestVtx.z())
+        tree.d3D_SecReco = sqrt(abs(secVtxGen[0]-bestVtx.x())*abs(secVtxGen[0]-bestVtx.x())+abs(secVtxGen[0]-bestVtx.y())*abs(secVtxGen[0]-bestVtx.y())+abs(secVtxGen[0]-bestVtx.z())*abs(secVtxGen[0]-bestVtx.z()))
+        
         tree.fill(reset=True)
-       
-print "maj_in_accept: ", maj_in_accept
-
-#print sv_count, csv_count, csvvsl_count
-print "event with sec vertex : ", ivf_count
-print "secondary vertex all: ", ivf_all
-print "good secondary vertex: ", ivf_good
-cmap=cm.get_cmap('afmhot')
-cmap.set_under('w')
-cmap.set_bad('gray')
-
-fig_Match, ax_Match = mplt.subplots(figsize=(15, 6))
-fig_Match.patch.set_facecolor('white')
-vrtxMatch.SetLineColor(2)
-vrtxNoMatch.SetLineColor(1)
-rplt.hist(vrtxMatch,axes=ax_Match)
-rplt.hist(vrtxNoMatch,axes=ax_Match)
-mplt.show()
-
-fig_IVF, ax_IVF = mplt.subplots(figsize=(15, 6))
-rplt.hist(vtxPlot_IVF,axes=ax_IVF,colorbar=True,cmap=cmap,vmin=.001)
-mplt.title('IVF')
-ax_IVF.set_xlabel('z [cm]')
-mplt.show()
-
-fig_SV, ax_SV = mplt.subplots(figsize=(15, 6))
-rplt.hist(vtxPlot_SV,axes=ax_SV,colorbar=True,cmap=cmap,vmin=.001)
-mplt.title('SV')
-ax_SV.set_xlabel('z [cm]')
-mplt.show()
-
-fig_CSV, ax_CSV = mplt.subplots(figsize=(15, 6))
-rplt.hist(vtxPlot_CSV,axes=ax_CSV,colorbar=True,cmap=cmap,vmin=.001)
-mplt.title('CSV')
-ax_CSV.set_xlabel('z [cm]')
-mplt.show()
-
-
-fig_CSVVSL, ax_CSVVSL = mplt.subplots(figsize=(15, 6))
-rplt.hist(vtxPlot_CSVVSL,axes=ax_CSVVSL,colorbar=True,cmap=cmap,vmin=.001)
-mplt.title('CSVVSL')
-ax_CSVVSL.set_xlabel('z [cm]')
-mplt.show()
-
-
 
 tree.write()
 outfile.close()
