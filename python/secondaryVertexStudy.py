@@ -15,6 +15,12 @@ from rootpy.plotting.style import get_style, set_style
 import matplotlib.pyplot as mplt
 from pylab import arange, show, cm
 from pdb import set_trace
+import os, sys
+from os.path import join
+
+# Open a file
+path = "/eos/user/j/jpriscia/HNL_IVF/SAMPLE_10GEV/"
+list_input = [join(path,f) for f in os.listdir( path )]
 
 
 def bestMatchedParticles( object, matchCollection):
@@ -48,18 +54,20 @@ def isAncestor(a, p):
         return False
 
 
-events = Events('/afs/cern.ch/user/j/jpriscia/CMSSW_HNL_17/src/HNL/HNL/src/secondVertex/prova_miniAOD.root')
+#events = Events(['/eos/user/j/jpriscia/HNL_IVF/SAMPLE_7GEV/ivf7GeV_35.root'])
 
+events = Events(list_input)
 
 #collections
 handlePruned, labelPruned  = Handle ('vector<reco::GenParticle>'), 'prunedGenParticles'
 handleJet, labelJet = Handle('vector<reco::GenJet>'), 'slimmedGenJetsAK8'
 handleIVF, labelIVF = Handle('vector<reco::Vertex>'),'inclusiveVertexFinder'
 handlePFCand, labelPFCand = Handle('vector<pat::PackedCandidate>'),'packedPFCandidates'
-
+handleMuon, labelMuon = Handle('vector<pat::Muon>'),'slimmedMuons'
+handlePV, labelPV = Handle('vector<reco::Vertex>'),'offlineSlimmedPrimaryVertices'
 
 #######OutputTTree###############
-outfile = root_open('miniAOD_IVF.root', 'w')
+outfile = root_open('miniAOD_10GeV_IVF.root', 'w')
 
 class GenTree(TreeModel):
         
@@ -77,6 +85,9 @@ class GenTree(TreeModel):
         vx_SecGen = FloatCol()
         vy_SecGen = FloatCol()
         vz_SecGen = FloatCol()
+        vx_PVReco = FloatCol()
+        vy_PVReco = FloatCol()
+        vz_PVReco = FloatCol()
         vx_SecReco = FloatCol()
         vy_SecReco = FloatCol()
         vz_SecReco = FloatCol()
@@ -84,6 +95,28 @@ class GenTree(TreeModel):
         dy_SecReco = FloatCol()
         dz_SecReco = FloatCol()
         d3D_SecReco = FloatCol()
+        vx_SecReco_T = FloatCol()
+        vy_SecReco_T = FloatCol()
+        vz_SecReco_T = FloatCol()
+        dx_SecReco_T = FloatCol()
+        dy_SecReco_T = FloatCol()
+        dz_SecReco_T = FloatCol()
+        d3D_SecReco_T = FloatCol()
+        num_looseMuons = IntCol()
+        num_tightMuons = IntCol()
+        num_promptMuons = IntCol()
+        num_muonsLoose_noPrompt = IntCol()
+        num_muonsTight_noPrompt = IntCol()
+        dist_allVtx = FloatCol()
+        muon_vtx_dxy = FloatCol()
+        muon_vtx_dz = FloatCol()
+        muonT_vtx_dxy = FloatCol()
+        muonT_vtx_dz = FloatCol()
+        muonPrompt_pt = FloatCol()
+        muonPrompt_px = FloatCol()
+        muonPrompt_py = FloatCol()
+        muonPrompt_pz = FloatCol()
+        muonPrompt_eta = FloatCol()
 
 tree = Tree('gentree', model=GenTree)
 
@@ -113,9 +146,31 @@ for evt in events:
     tree.dy_SecReco = -1000.
     tree.dz_SecReco = -1000.
     tree.d3D_SecReco = -1000.
-
-
-
+    tree.vx_SecReco_T = -1000.
+    tree.vy_SecReco_T = -1000.
+    tree.vz_SecReco_T = -1000.
+    tree.dx_SecReco_T = -1000.
+    tree.dy_SecReco_T = -1000.
+    tree.dz_SecReco_T = -1000.
+    tree.d3D_SecReco_T = -1000.
+    tree.num_tightMuons = -1000.
+    tree.num_looseMuons = -1000.
+    tree.num_promptMuons = -1000.
+    tree.num_muonsLoose_noPrompt = -1000.
+    tree.num_muonsTight_noPrompt = -1000.
+    tree.dist_allVtx = -1000.
+    tree.muon_vtx_dxy =  -1000.
+    tree.muon_vtx_dz =   -1000.
+    tree.muonT_vtx_dxy = -1000.
+    tree.muonT_vtx_dz =  -1000.
+    tree.vx_PVReco = -1000.
+    tree.vy_PVReco = -1000.
+    tree.vz_PVReco = -1000.
+    tree.muonPrompt_pt =  -1000.
+    tree.muonPrompt_px =  -1000.
+    tree.muonPrompt_py =  -1000.
+    tree.muonPrompt_pz =  -1000.
+    tree.muonPrompt_eta = -1000.
 
     if count%100==0: print 'processing event ', count
     count+=1
@@ -124,12 +179,16 @@ for evt in events:
     evt.getByLabel(labelJet, handleJet)
     evt.getByLabel(labelIVF, handleIVF)
     evt.getByLabel(labelPFCand, handlePFCand)
+    evt.getByLabel(labelMuon,handleMuon)
+    evt.getByLabel(labelPV,handlePV)
 
     # get the product                                                                                                      
     pruned = handlePruned.product()
     recoJets = handleJet.product()
     ivf = handleIVF.product()
     pfCands = handlePFCand.product()
+    muonCands = handleMuon.product()
+    vtxs = handlePV.product()
 
     #set_trace()
 
@@ -155,7 +214,11 @@ for evt in events:
 
         primaryVtx = (maj_n.vx(),maj_n.vy(),maj_n.vz())
 
+        #5 GeV  pt cut on the second muon at generator level  LooseMuon
 
+         
+        #trigger infos
+        
         #loop on the gen and look at final particles. Pi0 is considered as final particle
         final_particles = []
         final_particles_pi0 = []
@@ -177,7 +240,8 @@ for evt in events:
         # lambda to order in momentum. The one with higher p should be 2nd muon
         muons_gen.sort(key=lambda x: -x.pt())
 
-        if abs(muons_gen[0].vz())>200 or sqrt(muons_gen[0].vx()*muons_gen[0].vx()+muons_gen[0].vy()*muons_gen[0].vy())>60 or abs(muons_gen[0].eta())>2.5:
+        #EVENTS IN ACCEPTANCE
+        if abs(muons_gen[0].vz())>200 or sqrt(muons_gen[0].vx()*muons_gen[0].vx()+muons_gen[0].vy()*muons_gen[0].vy())>60 or abs(muons_gen[0].eta())>2.4 or muons_gen[0].pt()<5:
             tree.fill(reset=True)
             continue 
 
@@ -186,60 +250,145 @@ for evt in events:
         tree.vy_SecGen = muons_gen[0].vy()
         tree.vz_SecGen = muons_gen[0].vz()
 
-        #loop on PFCandidates to see how many do have a prompt muon
-        muonsPrompt=[]
-        muonsDetached=[]
-        for cand in pfCands:
-            if (cand.isGlobalMuon() or cand.isMuon() or cand.isTrackerMuon() or cand.isCaloMuon()) and cand.dxy()<0.1:
-                #print 'muon found'
-                muonsPrompt.append(cand)
-            if (cand.isGlobalMuon() or cand.isMuon() or cand.isTrackerMuon() or cand.isCaloMuon()) and cand.dxy()>0.1:
-                muonsDetached.append(cand)
-        #print muonsDetached
-        #if none, I don't even bother to check the secondary vertex
-        if len(muonsPrompt)==0 or len(muonsDetached)==0:
+        bestPV = None
+
+        for vtx in vtxs:
+            if not(vtx.isFake() and vtx.ndof() > 4.and  fabs(vtx.z()) < 24. and vtx.rho() < 2):
+                bestPV = vtx
+                tree.vx_PVReco = bestPV.x()
+                tree.vy_PVReco = bestPV.y()
+                tree.vz_PVReco = bestPV.z()
+                break 
+        if not bestPV: 
             tree.fill(reset=True)
             continue
+
+        
+        #loop on PFCandidates to see how many do have a prompt muon
+        muonsPrompt=[]
+        muonsLoose=[]
+        muonsTight=[]
+        #set_trace()
+        for muon in muonCands:
+            if muon.isTightMuon(bestPV) and muon.pt()>5 and abs(muon.eta())<2.4:
+                muonsTight.append(muon) 
+            if muon.isTightMuon(bestPV) and muon.pt()>24 and abs(muon.eta())<2.4 and muon.muonBestTrack().dxy(bestPV.position())<0.05 and muon.muonBestTrack().dz(bestPV.position())<0.1:
+                muonsPrompt.append(muon)
+            if muon.isLooseMuon() and muon.pt()>5 and abs(muon.eta())<2.4:
+                muonsLoose.append(muon)
+            
+
+        tree.num_promptMuons = len(muonsPrompt)
+        tree.num_looseMuons = len(muonsLoose)
+        tree.num_tightMuons = len(muonsTight)
+        
+        muonsPrompt.sort(key=lambda x: -x.pt())
+
+
+        if len(muonsPrompt)>0:
+            tree.muonPrompt_pt =  muonsPrompt[0].pt()
+            tree.muonPrompt_px =  muonsPrompt[0].px()
+            tree.muonPrompt_py =  muonsPrompt[0].py()
+            tree.muonPrompt_pz =  muonsPrompt[0].pz()
+            tree.muonPrompt_eta =  muonsPrompt[0].eta()
+
+            muonsLoose_noPrompt = [i for i in muonsLoose if i is not muonsPrompt[0]]
+            muonsTight_noPrompt = [i for i in muonsTight if i is not muonsPrompt[0]]
+        else:
+            muonsLoose_noPrompt = muonsLoose
+            muonsTight_noPrompt = muonsTight
+        tree.num_muonsLoose_noPrompt = len(muonsLoose_noPrompt)
+        tree.num_muonsTight_noPrompt = len(muonsTight_noPrompt)
+
+        if len(muonsPrompt)==0: 
+            tree.fill(reset=True)
+            continue
+
+        #small test to check how many verteces we have -- to comment
+        bestVtx = None    
+        delta_3D_All=100000000000.
+        for vtx in ivf:
+                deltaX = abs(secVtxGen[0]-vtx.x())
+                deltaY = abs(secVtxGen[1]-vtx.y())
+                deltaZ = abs(secVtxGen[2]-vtx.z())
+                delta_3D = sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)
+
+                if delta_3D<delta_3D_All:
+                    bestVtx = vtx
+                    delta_3D_All=delta_3D
+        
+        if bestVtx:
+            tree.dist_allVtx = delta_3D_All
+
+        
+        #tree.fill(reset=True)
+        #continue
+
+        #for vertex in ivf:
+        #    dist_allVtx = sqrt(abs(secVtxGen[0]-vertex.x())*abs(secVtxGen[0]-vertex.x())+abs(secVtxGen[0]-vertex.y())*abs(secVtxGen[0]-vertex.y())+abs(secVtxGen[0]-vertex.z())*abs(secVtxGen[0]-vertex.z()))
+        #    tree.dist_allVtx = dist_allVtx
+        #    tree.fill(reset=True)
+        #continue    
+        #################
+
          
         # ivf vertex position
         verteces_good = []
+        verteces_good_tight = []
         for vertex in ivf:
             for trk_id in range(vertex.tracksSize()): 
                 trk = vertex.trackRefAt(trk_id).get()
-                #print trk.algo()
-                if trk.dxy()>0.1:
-                    for muon_det in muonsDetached:
-                        if deltaR(trk,muon_det)<0.05:
-                            verteces_good.append(vertex)
-                            break   #if I have the detached muon, it is a good vertex!
+                for muon_det in muonsLoose_noPrompt:
+                    if deltaR(trk,muon_det)<0.4:
+                        verteces_good.append((vertex,muon_det,deltaR))
 
-        
-        if len(verteces_good)==0: 
-            tree.fill(reset=True)
-            continue
-        
-        #I match to the generated vertex and take the best
-        bestVtx = None
-        delta_3D_max = 1000000000
-        for vtx in verteces_good:
-                deltaX = abs(secVtxGen[0]-vertex.x())
-                deltaY = abs(secVtxGen[1]-vertex.y())
-                deltaZ = abs(secVtxGen[2]-vertex.z())
-                delta_3D = sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)
-                
-                if delta_3D<delta_3D_max:
-                    bestVtx = vtx
-                    delta_3D_max=delta_3D
-                    
+                for muon_t in muonsTight_noPrompt:
 
-        tree.vx_SecReco = bestVtx.x()
-        tree.vy_SecReco = bestVtx.y()
-        tree.vz_SecReco = bestVtx.z()
-        tree.dx_SecReco = abs(secVtxGen[0]-bestVtx.x())
-        tree.dy_SecReco = abs(secVtxGen[0]-bestVtx.y())
-        tree.dz_SecReco = abs(secVtxGen[0]-bestVtx.z())
-        tree.d3D_SecReco = sqrt(abs(secVtxGen[0]-bestVtx.x())*abs(secVtxGen[0]-bestVtx.x())+abs(secVtxGen[0]-bestVtx.y())*abs(secVtxGen[0]-bestVtx.y())+abs(secVtxGen[0]-bestVtx.z())*abs(secVtxGen[0]-bestVtx.z()))
+                    if deltaR(trk,muon_t)<0.4:
+                        verteces_good_tight.append((vertex,muon_t,deltaR))
+    
+        if len(verteces_good)>0:
+            verteces_good.sort(key=lambda tup: tup[2])
+            bestRecoVtx = verteces_good[0][0]
+            tree.muon_vtx_dxy = verteces_good[0][1].muonBestTrack().dxy(bestRecoVtx.position())
+            tree.muon_vtx_dz  = verteces_good[0][1].muonBestTrack().dz(bestRecoVtx.position())
+
+            deltaX = abs(secVtxGen[0]-bestRecoVtx.x())
+            deltaY = abs(secVtxGen[1]-bestRecoVtx.y())
+            deltaZ = abs(secVtxGen[2]-bestRecoVtx.z())
+            delta_3D = sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)
+
+            tree.vx_SecReco = bestRecoVtx.x()
+            tree.vy_SecReco = bestRecoVtx.y()
+            tree.vz_SecReco = bestRecoVtx.z()
+            tree.dx_SecReco = deltaX
+            tree.dy_SecReco = deltaY
+            tree.dz_SecReco = deltaZ
+            tree.d3D_SecReco = delta_3D
         
+
+        if len(verteces_good_tight)>0:
+
+            verteces_good_tight.sort(key=lambda tup: tup[2])
+            bestRecoVtxTight = verteces_good_tight[0][0]
+            tree.muonT_vtx_dxy = verteces_good_tight[0][1].muonBestTrack().dxy(bestRecoVtxTight.position())
+            tree.muonT_vtx_dz  = verteces_good_tight[0][1].muonBestTrack().dz(bestRecoVtxTight.position())
+
+            deltaX_T = abs(secVtxGen[0]-bestRecoVtxTight.x())
+            deltaY_T = abs(secVtxGen[1]-bestRecoVtxTight.y())
+            deltaZ_T = abs(secVtxGen[2]-bestRecoVtxTight.z())
+            delta_3D_T = sqrt(deltaX*deltaX+deltaY*deltaY+deltaZ*deltaZ)
+
+            tree.vx_SecReco_T = bestRecoVtxTight.x()
+            tree.vy_SecReco_T = bestRecoVtxTight.y()
+            tree.vz_SecReco_T = bestRecoVtxTight.z()
+            tree.dx_SecReco_T = deltaX_T
+            tree.dy_SecReco_T = deltaY_T
+            tree.dz_SecReco_T = deltaZ_T
+            tree.d3D_SecReco_T = delta_3D_T
+        
+
+
         tree.fill(reset=True)
 
 tree.write()

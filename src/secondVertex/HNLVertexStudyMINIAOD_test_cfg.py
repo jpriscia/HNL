@@ -3,19 +3,6 @@ import FWCore.ParameterSet.Config as cms
 import FWCore.ParameterSet.VarParsing as VarParsing
 from pdb import set_trace
 
-options = VarParsing.VarParsing()
-
-options.register('outputFile','output',VarParsing.VarParsing.multiplicity.singleton,VarParsing.VarParsing.varType.string,"output File (w/o .root)")
-options.register(
-    'jobNumber',-1,
-    VarParsing.VarParsing.multiplicity.singleton,
-    VarParsing.VarParsing.varType.int,
-    "job number"
-    )
-
-options.parseArguments()
-
-
 
 process = cms.Process("HNLSecondaryVertex")
 
@@ -44,22 +31,18 @@ process.load('PhysicsTools.PatAlgos.slimming.unpackedTracksAndVertices_cfi')
 #put input file
 
 
-lines = open("files_10GeV.txt").read().splitlines()
-#readFiles = cms.untracked.vstring()
+#lines = open("files_4GeV.txt").read().splitlines()
+readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring()
-process.source = cms.Source("PoolSource",
-                             fileNames = cms.untracked.vstring(lines[options.jobNumber]),
-                            secondaryFileNames = cms.untracked.vstring()
-                            )
+#process.source = cms.Source("PoolSource",
+#                             fileNames = cms.untracked.vstring(lines[options.jobNumber]),
+#                            secondaryFileNames = cms.untracked.vstring()
+#                            )
 
-#process.source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
+process.source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
-#readFiles.extend( [
-#'root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoMiniAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-4_V-0.004472135955_mu_pre2017_leptonFirst_NLO/heavyNeutrino_180.root',
-#'root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoMiniAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-4_V-0.004472135955_mu_pre2017_leptonFirst_NLO/heavyNeutrino_181.root',
-#'root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoMiniAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-4_V-0.004472135955_mu_pre2017_leptonFirst_NLO/heavyNeutrino_182.root'
-#])
+readFiles.extend(['root://cms-xrd-global.cern.ch//store/user/tomc/heavyNeutrinoMiniAOD/Moriond17/displaced/HeavyNeutrino_lljj_M-10_V-0.00244948974278_mu_onshell_pre2017_leptonFirst_NLO/heavyNeutrino_189.root'])
 
 
 process.inclusiveVertexFinder  = cms.EDProducer("InclusiveVertexFinder",  #????
@@ -115,7 +98,7 @@ process.Out = cms.OutputModule("PoolOutputModule",
      outputCommands = cms.untracked.vstring(
          "keep *",
          ),
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string('/eos/user/j/jpriscia/HNL_IVF/ivf10GeV_47.root'),
     SelectEvents = cms.untracked.PSet(
        SelectEvents = cms.vstring('*')
     ),
